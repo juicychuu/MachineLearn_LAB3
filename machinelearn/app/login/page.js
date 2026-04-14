@@ -8,7 +8,10 @@ export default function Login() {
   const [password, setPassword] = useState('')
 
   const handleSignUp = async () => {
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
     if (error) alert(error.message)
     else alert('Check your email!')
   }
@@ -23,44 +26,46 @@ export default function Login() {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      
-      <div className="bg-white p-8 rounded-xl shadow-md w-80">
-        
-        <h2 className="text-2xl font-bold mb-4 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-green-50">
+      <div className="bg-green-100 border border-green-300 rounded-2xl shadow-xl p-8 w-[350px]">
+        <h2 className="text-2xl font-bold text-green-800 text-center mb-6">
           Login / Sign Up
         </h2>
 
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full p-2 border rounded mb-3"
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="bg-green-200 p-4 rounded-xl mb-4">
+          <input
+            type="email"
+            placeholder="Email"
+            className="w-full p-2 rounded-md border border-green-400 outline-none"
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full p-2 border rounded mb-4"
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="bg-green-200 p-4 rounded-xl mb-4">
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full p-2 rounded-md border border-green-400 outline-none"
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
-        <button
-          onClick={handleSignUp}
-          className="w-full bg-green-500 text-white p-2 rounded mb-2"
-        >
-          Sign Up
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleSignUp}
+            className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+          >
+            Sign Up
+          </button>
 
-        <button
-          onClick={handleLogin}
-          className="w-full bg-green-500 text-white p-2 rounded"
-        >
-          Login
-        </button>
-
+          <button
+            onClick={handleLogin}
+            className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg transition"
+          >
+            Login
+          </button>
+        </div>
       </div>
-
     </div>
   )
 }
