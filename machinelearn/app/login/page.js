@@ -41,16 +41,17 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <p className="text-sm mt-3 text-center">
-          No account? <a href="/signup" className="text-blue-500">Sign up</a>
-        </p>
-
         <button
           onClick={login}
           className="w-full bg-blue-500 text-white p-2"
         >
           Login
         </button>
+
+        <p className="text-sm mt-3 text-center">
+          No account? <a href="/signup" className="text-blue-500">Sign up</a>
+        </p>
+
       </div>
     </div>
   )
