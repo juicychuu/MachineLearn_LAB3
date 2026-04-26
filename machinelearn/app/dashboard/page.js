@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { addArticles, likeArticle, dislikeArticle, addComment, getComments, addReply, getReplies } from '../../services/articleService'
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, formatNotificationMessage, NotificationType } from '../../services/notificationService'
 import { supabase } from '../../lib/supabaseClient'
+import Modal from '../components/Modal'
 
 const sidebarItems = [
   { icon: '📊', label: 'Dashboard', id: 'dashboard' },
@@ -30,6 +31,7 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'success' })
 
   const handleSidebarClick = (id) => {
     setActiveView(id)
@@ -70,12 +72,12 @@ export default function Dashboard() {
     const result = await addArticles(form)
 
     if (result) {
-      alert('Article added successfully!')
+      setModal({ isOpen: true, title: 'Success!', message: 'Article added successfully!', type: 'success' })
       setForm({ title: '', content: '', author: '', category: '' })
       setShowForm(false)
       fetchPosts()
     } else {
-      alert('Failed to add article. Please try again.')
+      setModal({ isOpen: true, title: 'Error!', message: 'Failed to add article. Please try again.', type: 'error' })
     }
   }
 
@@ -132,7 +134,6 @@ export default function Dashboard() {
   
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
-      {/* Sidebar */}
       <aside style={{ width: '260px', backgroundColor: '#fff', borderRight: '1px solid #e9ecef', padding: '32px 0' }}>
         <div style={{ padding: '0 24px', marginBottom: '40px' }}>
           <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: '#1a1a2e' }}>Machine Learning Hub</h2>
@@ -179,9 +180,7 @@ export default function Dashboard() {
         </nav>
       </aside>
 
-      {/* Main Content */}
       <main style={{ flex: 1, padding: '40px 48px' }}>
-        {/* Header */}
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#1a1a2e' }}>
@@ -215,7 +214,6 @@ export default function Dashboard() {
           )}
         </header>
 
-        {/* Add Article Form */}
         {activeView === 'dashboard' && showForm && (
           <div style={{ 
             backgroundColor: '#fff', 
@@ -300,7 +298,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Top 5 Most Liked Articles */}
         {activeView === 'dashboard' && posts.length > 0 && (
           <section style={{ marginBottom: '48px' }}>
             <h2 style={{ margin: '0 0 24px', fontSize: '22px', fontWeight: '600', color: '#1a1a2e' }}>🏆 Top 5 Most Liked Articles</h2>
@@ -376,7 +373,6 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* Articles Section */}
         {activeView === 'dashboard' && (
           <section>
           <h2 style={{ margin: '0 0 24px', fontSize: '22px', fontWeight: '600', color: '#1a1a2e' }}>All Articles</h2>
@@ -489,7 +485,6 @@ export default function Dashboard() {
         </section>
         )}
 
-        {/* Notifications View */}
         {activeView === 'notifications' && (
           <section>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -543,7 +538,7 @@ export default function Dashboard() {
                       gap: '16px'
                     }}
                   >
-                    {/* Notification Icon */}
+  
                     <span style={{ fontSize: '24px' }}>
                       {notification.type === 'like' && '👍'}
                       {notification.type === 'dislike' && '👎'}
@@ -551,7 +546,6 @@ export default function Dashboard() {
                       {notification.type === 'reply' && '↩️'}
                     </span>
                     
-                    {/* Notification Content */}
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ 
@@ -590,7 +584,6 @@ export default function Dashboard() {
                       </p>
                     </div>
 
-                    {/* Mark as Read Button */}
                     {!notification.is_read && (
                       <button 
                         onClick={async () => {
@@ -618,7 +611,6 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Article Modal */}
       {selectedArticle && (
         <div 
           style={{
@@ -743,11 +735,9 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* Comments Section */}
             <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e9ecef' }}>
               <h3 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600', color: '#1a1a2e' }}>💬 Comments</h3>
               
-              {/* Add Comment Form */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
                 <input
                   placeholder="Write a comment..."
@@ -780,7 +770,6 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {/* Comments List */}
               <div style={{ display: 'grid', gap: '16px' }}>
                 {comments.map(comment => (
                   <div key={comment.id} style={{ 
@@ -795,8 +784,7 @@ export default function Dashboard() {
                       </span>
                     </div>
                     <p style={{ margin: '0 0 12px', color: '#495057', fontSize: '14px' }}>{comment.content}</p>
-                    
-                    {/* Reply Button */}
+                  
                     <button 
                       onClick={() => { setReplyingTo(replyingTo === comment.id ? null : comment.id); fetchReplies(comment.id); }}
                       style={{ 
@@ -811,7 +799,6 @@ export default function Dashboard() {
                       ↩️ Reply
                     </button>
 
-                    {/* Reply Form */}
                     {replyingTo === comment.id && (
                       <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                         <input
@@ -844,7 +831,6 @@ export default function Dashboard() {
                       </div>
                     )}
 
-                    {/* Replies */}
                     {commentReplies[comment.id] && commentReplies[comment.id].length > 0 && (
                       <div style={{ marginTop: '12px', marginLeft: '20px', borderLeft: '2px solid #dee2e6', paddingLeft: '12px' }}>
                         {commentReplies[comment.id].map(reply => (
@@ -862,6 +848,14 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+      />
     </div>
   )
 } 
