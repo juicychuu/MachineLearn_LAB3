@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { addArticles, likeArticle, dislikeArticle, addComment, getComments, addReply, getReplies } from '../../services/articleService'
+import { useState, useEffect, Fragment } from 'react'
+import { addArticles, likeArticle, dislikeArticle, addComment, getComments, addReply, getReplies, shareArticle, SharePlatform } from '../../services/articleService'
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, formatNotificationMessage, NotificationType } from '../../services/notificationService'
 import { supabase } from '../../lib/supabaseClient'
 import Modal from '../components/Modal'
@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'success' })
+  const [shareModal, setShareModal] = useState({ isOpen: false, post: null })
 
   const handleSidebarClick = (id) => {
     setActiveView(id)
@@ -131,9 +132,24 @@ export default function Dashboard() {
       fetchReplies(commentId)
     }
   }
+
+  const handleShare = (post) => {
+    setShareModal({ isOpen: true, post })
+  }
+
+  const handleSharePlatform = async (post, platform) => {
+    const result = await shareArticle(post, platform)
+    if (result.success) {
+      setModal({ isOpen: true, title: 'Shared!', message: `Article shared to ${platform} successfully!`, type: 'success' })
+    } else {
+      setModal({ isOpen: true, title: 'Error', message: 'Failed to share article. Please try again.', type: 'error' })
+    }
+    setShareModal({ isOpen: false, post: null })
+  }
   
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+    <Fragment>
+      <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
       <aside style={{ width: '260px', backgroundColor: '#fff', borderRight: '1px solid #e9ecef', padding: '32px 0' }}>
         <div style={{ padding: '0 24px', marginBottom: '40px' }}>
           <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700', color: '#1a1a2e' }}>Machine Learning Hub</h2>
@@ -477,6 +493,24 @@ export default function Dashboard() {
                     }}
                   >
                     👎 Dislike ({post.dislikes || 0})
+                  </button>
+                  <button 
+                    onClick={() => handleShare(post)}
+                    style={{ 
+                      backgroundColor: 'transparent', 
+                      border: '1px solid #e9ecef',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      color: '#007bff',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    📤 Share
                   </button>
                 </div>
               </article>
@@ -856,6 +890,173 @@ export default function Dashboard() {
         message={modal.message}
         type={modal.type}
       />
+
+      {/* Share Modal */}
+      {shareModal.isOpen && shareModal.post && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '480px',
+            width: '90%',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: '#1a1a2e' }}>Share Article</h2>
+              <button
+                onClick={() => setShareModal({ isOpen: false, post: null })}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#868e96'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <p style={{ margin: '0 0 24px', color: '#495057', fontSize: '15px' }}>
+              Share "{shareModal.post.title}" to:
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              <button
+                onClick={() => handleSharePlatform(shareModal.post, SharePlatform.WHATSAPP)}
+                style={{
+                  backgroundColor: '#25D366',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>💬</span>
+                WhatsApp
+              </button>
+              <button
+                onClick={() => handleSharePlatform(shareModal.post, SharePlatform.FACEBOOK)}
+                style={{
+                  backgroundColor: '#1877F2',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>📘</span>
+                Facebook
+              </button>
+              <button
+                onClick={() => handleSharePlatform(shareModal.post, SharePlatform.TWITTER)}
+                style={{
+                  backgroundColor: '#1DA1F2',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>🐦</span>
+                Twitter
+              </button>
+              <button
+                onClick={() => handleSharePlatform(shareModal.post, SharePlatform.LINKEDIN)}
+                style={{
+                  backgroundColor: '#0A66C2',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>💼</span>
+                LinkedIn
+              </button>
+              <button
+                onClick={() => handleSharePlatform(shareModal.post, SharePlatform.EMAIL)}
+                style={{
+                  backgroundColor: '#EA4335',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>📧</span>
+                Email
+              </button>
+              <button
+                onClick={() => handleSharePlatform(shareModal.post, SharePlatform.TELEGRAM)}
+                style={{
+                  backgroundColor: '#0088cc',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>✈️</span>
+                Telegram
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </Fragment>
   )
 } 

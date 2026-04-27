@@ -206,3 +206,66 @@ export async function getReplies(commentId) {
         return []
     }
 }
+
+// Share platforms enum
+export const SharePlatform = {
+    WHATSAPP: 'whatsapp',
+    FACEBOOK: 'facebook',
+    TWITTER: 'twitter',
+    LINKEDIN: 'linkedin',
+    EMAIL: 'email',
+    TELEGRAM: 'telegram'
+}
+
+// Generate share URL for a post
+export function getShareUrl(postId, postTitle) {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    return `${baseUrl}/dashboard?post=${postId}`
+}
+
+// Share article to different platforms
+export async function shareArticle(post, platform) {
+    try {
+        if (!post || !platform) {
+            throw new Error('Post and platform are required')
+        }
+
+        const shareUrl = getShareUrl(post.id, post.title)
+        const shareText = `Check out this article: ${post.title}`
+        
+        let shareUrlGenerated = ''
+        
+        switch (platform) {
+            case SharePlatform.WHATSAPP:
+                shareUrlGenerated = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`
+                break
+            case SharePlatform.FACEBOOK:
+                shareUrlGenerated = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`
+                break
+            case SharePlatform.TWITTER:
+                shareUrlGenerated = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+                break
+            case SharePlatform.LINKEDIN:
+                shareUrlGenerated = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(post.title)}`
+                break
+            case SharePlatform.EMAIL:
+                shareUrlGenerated = `mailto:?subject=${encodeURIComponent(post.title)}&body=${encodeURIComponent(shareText + '\n\n' + shareUrl)}`
+                break
+            case SharePlatform.TELEGRAM:
+                shareUrlGenerated = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`
+                break
+            default:
+                throw new Error('Invalid platform')
+        }
+
+        // Open share window
+        if (typeof window !== 'undefined' && shareUrlGenerated) {
+            window.open(shareUrlGenerated, '_blank', 'width=600,height=400')
+        }
+
+        return { success: true, platform, url: shareUrlGenerated }
+    } catch (error) {
+        console.error('Error sharing article:', error.message)
+        return { success: false, error: error.message }
+    }
+}
