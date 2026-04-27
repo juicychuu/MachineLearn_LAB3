@@ -891,7 +891,6 @@ export default function Dashboard() {
         type={modal.type}
       />
 
-      {/* Share Modal */}
       {shareModal.isOpen && shareModal.post && (
         <div style={{
           position: 'fixed',

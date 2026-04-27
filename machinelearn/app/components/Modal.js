@@ -74,7 +74,6 @@ export default function Modal({ isOpen, onClose, title, message, type = 'success
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Icon */}
         <div
           style={{
             width: '64px',
@@ -93,7 +92,6 @@ export default function Modal({ isOpen, onClose, title, message, type = 'success
           {getIcon()}
         </div>
 
-        {/* Title */}
         <h2
           style={{
             margin: '0 0 12px',
@@ -105,7 +103,6 @@ export default function Modal({ isOpen, onClose, title, message, type = 'success
           {title}
         </h2>
 
-        {/* Message */}
         <p
           style={{
             margin: '0 0 24px',
