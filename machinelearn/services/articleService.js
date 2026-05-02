@@ -2,9 +2,55 @@ import { supabase } from '../lib/supabaseClient'
 import { createNotification, NotificationType } from './notificationService'
 
 // Get current user from Supabase auth
-async function getCurrentUser() {
+export async function getCurrentUser() {
     const { data: { user }, error } = await supabase.auth.getUser()
     return user
+}
+
+function isEmail(value) {
+    return typeof value === 'string' && value.includes('@')
+}
+
+function maskEmail(email) {
+    const [localPart, domain] = email.split('@')
+    if (!localPart || !domain) return email
+
+    const maskedLocal = localPart.length <= 2
+        ? `${localPart[0]}*`
+        : `${localPart[0]}${'*'.repeat(Math.max(1, localPart.length - 2))}${localPart.slice(-1)}`
+
+    const [host, ...rest] = domain.split('.')
+    const maskedHost = host.length <= 2
+        ? `${host[0]}*`
+        : `${host[0]}${'*'.repeat(Math.max(1, host.length - 2))}${host.slice(-1)}`
+
+    return `${maskedLocal}@${maskedHost}${rest.length ? `.${rest.join('.')}` : ''}`
+}
+
+export function formatDisplayName(name) {
+    if (!name) return 'User'
+    return isEmail(name) ? maskEmail(name) : name
+}
+
+export async function getCurrentUserDisplayName() {
+    const user = await getCurrentUser()
+    if (!user) return 'User'
+    return user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'User'
+}
+
+export async function setCurrentUserDisplayName(displayName) {
+    const { error } = await supabase.auth.updateUser({
+        data: { full_name: displayName }
+    })
+    if (error) throw error
+    return true
+}
+
+export async function isCurrentUserAuthor(author) {
+    const user = await getCurrentUser()
+    if (!user) return false
+    const currentName = user.user_metadata?.full_name || user.user_metadata?.name || user.email
+    return currentName === author
 }
 
 // Get user's vote on a specific post
@@ -79,6 +125,8 @@ export async function likeArticle(id) {
         const user = await getCurrentUser()
         if (!user) throw new Error('User not authenticated')
 
+        const userDisplayName = await getCurrentUserDisplayName()
+
         const { data: post, error: fetchError } = await supabase
             .from('posts')
             .select('*')
@@ -125,7 +173,7 @@ export async function likeArticle(id) {
                     postId: id,
                     postTitle: post.title,
                     type: NotificationType.LIKE,
-                    userName: 'User',
+                    userName: userDisplayName,
                     userId: user.id
                 })
 
@@ -149,7 +197,7 @@ export async function likeArticle(id) {
                 postId: id,
                 postTitle: post.title,
                 type: NotificationType.LIKE,
-                userName: 'User',
+                userName: userDisplayName,
                 userId: user.id
             })
 
@@ -165,6 +213,8 @@ export async function dislikeArticle(id) {
     try {
         const user = await getCurrentUser()
         if (!user) throw new Error('User not authenticated')
+
+        const userDisplayName = await getCurrentUserDisplayName()
 
         const { data: post, error: fetchError } = await supabase
             .from('posts')
@@ -212,7 +262,7 @@ export async function dislikeArticle(id) {
                     postId: id,
                     postTitle: post.title,
                     type: NotificationType.DISLIKE,
-                    userName: 'User',
+                    userName: userDisplayName,
                     userId: user.id
                 })
 
@@ -236,7 +286,7 @@ export async function dislikeArticle(id) {
                 postId: id,
                 postTitle: post.title,
                 type: NotificationType.DISLIKE,
-                userName: 'User',
+                userName: userDisplayName,
                 userId: user.id
             })
 
@@ -253,6 +303,9 @@ export async function addComment(postId, { author, content }) {
         if (!author || !content) {
             throw new Error('Author and content are required')
         }
+
+        const user = await getCurrentUser()
+        if (!user) throw new Error('User not authenticated')
 
         // Get post title for notification
         const { data: post } = await supabase
@@ -275,7 +328,7 @@ export async function addComment(postId, { author, content }) {
                 postTitle: post.title,
                 type: NotificationType.COMMENT,
                 userName: author,
-                userId: 'user-1'
+                userId: user.id
             })
         }
 
@@ -303,11 +356,41 @@ export async function getComments(postId) {
     }
 }
 
+export async function deleteComment(commentId, author) {
+    try {
+        if (!commentId || !author) {
+            throw new Error('Comment id and author are required')
+        }
+
+        const user = await getCurrentUser()
+        if (!user) throw new Error('User not authenticated')
+
+        const currentName = user.user_metadata?.full_name || user.user_metadata?.name || user.email
+        if (currentName !== author) {
+            throw new Error('You can only delete your own comment')
+        }
+
+        const { error } = await supabase
+            .from('comments')
+            .delete()
+            .eq('id', commentId)
+
+        if (error) throw error
+        return true
+    } catch (error) {
+        console.error('Error deleting comment:', error.message)
+        return false
+    }
+}
+
 export async function addReply(commentId, { author, content }) {
     try {
         if (!author || !content) {
             throw new Error('Author and content are required')
         }
+
+        const user = await getCurrentUser()
+        if (!user) throw new Error('User not authenticated')
 
         // Get post title through comment
         const { data: comment } = await supabase
@@ -339,7 +422,7 @@ export async function addReply(commentId, { author, content }) {
             postTitle: postTitle,
             type: NotificationType.REPLY,
             userName: author,
-            userId: 'user-1'
+            userId: user.id
         })
 
         return data
