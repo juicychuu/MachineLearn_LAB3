@@ -32,13 +32,13 @@ export default function Modal({ isOpen, onClose, title, message, type = 'success
   const getColors = () => {
     switch (type) {
       case 'success':
-        return { bg: '#d4edda', border: '#c3e6cb', text: '#155724', icon: '#28a745' }
+        return { bg: '#1a1a1a', border: '#3ECF8E', text: '#ffffff', icon: '#3ECF8E', buttonBg: '#3ECF8E', buttonText: '#ffffff' }
       case 'error':
-        return { bg: '#f8d7da', border: '#f5c6cb', text: '#721c24', icon: '#dc3545' }
+        return { bg: '#1a1a1a', border: '#ef4444', text: '#ffffff', icon: '#ef4444', buttonBg: '#ef4444', buttonText: '#ffffff' }
       case 'warning':
-        return { bg: '#fff3cd', border: '#ffeeba', text: '#856404', icon: '#ffc107' }
+        return { bg: '#1a1a1a', border: '#f59e0b', text: '#ffffff', icon: '#f59e0b', buttonBg: '#f59e0b', buttonText: '#ffffff' }
       default:
-        return { bg: '#d1ecf1', border: '#bee5eb', text: '#0c5460', icon: '#17a2b8' }
+        return { bg: '#1a1a1a', border: '#3b82f6', text: '#ffffff', icon: '#3b82f6', buttonBg: '#3b82f6', buttonText: '#ffffff' }
     }
   }
 
@@ -63,14 +63,15 @@ export default function Modal({ isOpen, onClose, title, message, type = 'success
     >
       <div
         style={{
-          backgroundColor: '#fff',
+          backgroundColor: '#1a1a1a',
           borderRadius: '16px',
           padding: '32px',
           maxWidth: '400px',
           width: '100%',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
           textAlign: 'center',
-          animation: 'fadeIn 0.3s ease'
+          animation: 'fadeIn 0.3s ease',
+          border: '1px solid #2a2a2a'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -86,7 +87,8 @@ export default function Modal({ isOpen, onClose, title, message, type = 'success
             justifyContent: 'center',
             margin: '0 auto 20px',
             fontSize: '32px',
-            color: colors.icon
+            color: colors.icon,
+            boxShadow: `0 0 20px ${colors.border}30`
           }}
         >
           {getIcon()}
@@ -107,7 +109,7 @@ export default function Modal({ isOpen, onClose, title, message, type = 'success
           style={{
             margin: '0 0 24px',
             fontSize: '15px',
-            color: '#495057',
+            color: '#9ca3af',
             lineHeight: '1.6'
           }}
         >
@@ -119,14 +121,15 @@ export default function Modal({ isOpen, onClose, title, message, type = 'success
           onClick={onClose}
           style={{
             backgroundColor: colors.icon,
-            color: '#fff',
+            color: '#ffffff',
             border: 'none',
             padding: '12px 32px',
             borderRadius: '8px',
             fontSize: '15px',
             fontWeight: '600',
             cursor: 'pointer',
-            transition: 'all 0.2s ease'
+            transition: 'all 0.3s ease',
+            boxShadow: `0 4px 15px ${colors.border}30`
           }}
         >
           OK

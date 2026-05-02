@@ -23,22 +23,24 @@ export default function Signup() {
   }
 
   return (
-    <div className="flex justify-center items-center h-screen bg-gradient-to-br from-emerald-500 to-green-900">
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
       
-      <div className="backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl p-8 rounded-2xl w-80">
+      <div className="backdrop-blur-xl bg-gray-800/50 border border-gray-700/50 shadow-2xl p-8 rounded-2xl w-80">
         
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-green-500/10 pointer-events-none" />
+
+        <h2 className="text-2xl font-bold mb-6 text-center text-white relative z-10">
           Sign Up
         </h2>
 
         <input
-          className="w-full p-2 mb-3 rounded-lg bg-white/20 border border-white/30 text-gray-900 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          className="w-full p-3 mb-4 rounded-xl bg-gray-700/50 border border-gray-600/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition duration-300 relative z-10"
           placeholder="Email"
           onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
-          className="w-full p-2 mb-5 rounded-lg bg-white/20 border border-white/30 text-gray-900 placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          className="w-full p-3 mb-6 rounded-xl bg-gray-700/50 border border-gray-600/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition duration-300 relative z-10"
           type="password"
           placeholder="Password"
           onChange={(e) => setPassword(e.target.value)}
@@ -46,16 +48,19 @@ export default function Signup() {
 
         <button
           onClick={signup}
-          className="w-full bg-emerald-300 text-gray-900 font-semibold p-2 rounded-xl 
-                     shadow-[0_0_15px_rgba(110,231,183,0.6)]
-                     hover:bg-emerald-400 transition duration-300"
+          className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold p-3 rounded-xl 
+                     shadow-[0_0_20px_rgba(62,207,142,0.3)]
+                     hover:shadow-[0_0_30px_rgba(62,207,142,0.5)]
+                     hover:from-emerald-400 hover:to-emerald-500
+                     active:scale-95
+                     transition duration-300 relative z-10"
         >
           Sign Up
         </button>
 
-        <p className="text-sm mt-4 text-center text-gray-800">
+        <p className="text-sm mt-6 text-center text-gray-400 relative z-10">
           Already have an account?{' '}
-          <a href="/login" className="text-emerald-200 hover:underline">
+          <a href="/login" className="text-emerald-400 hover:text-emerald-300 hover:underline transition duration-300">
             Login
           </a>
         </p>

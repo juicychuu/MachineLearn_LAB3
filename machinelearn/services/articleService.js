@@ -1,6 +1,59 @@
 import { supabase } from '../lib/supabaseClient'
 import { createNotification, NotificationType } from './notificationService'
 
+// Get current user from Supabase auth
+async function getCurrentUser() {
+    const { data: { user }, error } = await supabase.auth.getUser()
+    return user
+}
+
+// Get user's vote on a specific post
+export async function getUserVote(postId) {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return null
+
+        const { data, error } = await supabase
+            .from('user_votes')
+            .select('*')
+            .eq('post_id', postId)
+            .eq('user_id', user.id)
+            .maybeSingle()
+
+        if (error) throw error
+        return data
+    } catch (error) {
+        console.error('Error fetching user vote:', error.message)
+        return null
+    }
+}
+
+// Get all user votes for multiple posts
+export async function getUserVotesForPosts(postIds) {
+    try {
+        const user = await getCurrentUser()
+        if (!user) return {}
+
+        const { data, error } = await supabase
+            .from('user_votes')
+            .select('*')
+            .eq('user_id', user.id)
+            .in('post_id', postIds)
+
+        if (error) throw error
+
+        // Convert to object with postId as key
+        const votesMap = {}
+        data.forEach(vote => {
+            votesMap[vote.post_id] = vote
+        })
+        return votesMap
+    } catch (error) {
+        console.error('Error fetching user votes:', error.message)
+        return {}
+    }
+}
+
 export async function addArticles({ title, content, author, category }) {
     try {
         if (!title || !content || !author || !category) {
@@ -23,6 +76,9 @@ export async function addArticles({ title, content, author, category }) {
 
 export async function likeArticle(id) {
     try {
+        const user = await getCurrentUser()
+        if (!user) throw new Error('User not authenticated')
+
         const { data: post, error: fetchError } = await supabase
             .from('posts')
             .select('*')
@@ -32,23 +88,73 @@ export async function likeArticle(id) {
         if (fetchError) throw fetchError
         if (!post) throw new Error('Post not found')
 
-        const { error } = await supabase
-            .from('posts')
-            .update({ likes: (post.likes || 0) + 1 })
-            .eq('id', id)
+        // Check if user has already voted
+        const existingVote = await getUserVote(id)
 
-        if (error) throw error
+        if (existingVote) {
+            if (existingVote.vote_type === 'like') {
+                // User already liked - remove the like
+                await supabase
+                    .from('user_votes')
+                    .delete()
+                    .eq('id', existingVote.id)
 
-        // Create notification for like
-        await createNotification({
-            postId: id,
-            postTitle: post.title,
-            type: NotificationType.LIKE,
-            userName: 'User',
-            userId: 'user-1'
-        })
+                await supabase
+                    .from('posts')
+                    .update({ likes: Math.max(0, (post.likes || 0) - 1) })
+                    .eq('id', id)
 
-        return true
+                return true
+            } else if (existingVote.vote_type === 'dislike') {
+                // User previously disliked - change to like
+                await supabase
+                    .from('user_votes')
+                    .update({ vote_type: 'like' })
+                    .eq('id', existingVote.id)
+
+                await supabase
+                    .from('posts')
+                    .update({
+                        likes: (post.likes || 0) + 1,
+                        dislikes: Math.max(0, (post.dislikes || 0) - 1)
+                    })
+                    .eq('id', id)
+
+                // Create notification for like
+                await createNotification({
+                    postId: id,
+                    postTitle: post.title,
+                    type: NotificationType.LIKE,
+                    userName: 'User',
+                    userId: user.id
+                })
+
+                return true
+            }
+        } else {
+            // No existing vote - add like
+            const { error: insertError } = await supabase
+                .from('user_votes')
+                .insert([{ user_id: user.id, post_id: id, vote_type: 'like' }])
+
+            if (insertError) throw insertError
+
+            await supabase
+                .from('posts')
+                .update({ likes: (post.likes || 0) + 1 })
+                .eq('id', id)
+
+            // Create notification for like
+            await createNotification({
+                postId: id,
+                postTitle: post.title,
+                type: NotificationType.LIKE,
+                userName: 'User',
+                userId: user.id
+            })
+
+            return true
+        }
     } catch (error) {
         console.error('Error liking article:', error.message)
         return false
@@ -57,6 +163,9 @@ export async function likeArticle(id) {
 
 export async function dislikeArticle(id) {
     try {
+        const user = await getCurrentUser()
+        if (!user) throw new Error('User not authenticated')
+
         const { data: post, error: fetchError } = await supabase
             .from('posts')
             .select('*')
@@ -66,23 +175,73 @@ export async function dislikeArticle(id) {
         if (fetchError) throw fetchError
         if (!post) throw new Error('Post not found')
 
-        const { error } = await supabase
-            .from('posts')
-            .update({ dislikes: (post.dislikes || 0) + 1 })
-            .eq('id', id)
+        // Check if user has already voted
+        const existingVote = await getUserVote(id)
 
-        if (error) throw error
+        if (existingVote) {
+            if (existingVote.vote_type === 'dislike') {
+                // User already disliked - remove the dislike
+                await supabase
+                    .from('user_votes')
+                    .delete()
+                    .eq('id', existingVote.id)
 
-        // Create notification for dislike
-        await createNotification({
-            postId: id,
-            postTitle: post.title,
-            type: NotificationType.DISLIKE,
-            userName: 'User',
-            userId: 'user-1'
-        })
+                await supabase
+                    .from('posts')
+                    .update({ dislikes: Math.max(0, (post.dislikes || 0) - 1) })
+                    .eq('id', id)
 
-        return true
+                return true
+            } else if (existingVote.vote_type === 'like') {
+                // User previously liked - change to dislike
+                await supabase
+                    .from('user_votes')
+                    .update({ vote_type: 'dislike' })
+                    .eq('id', existingVote.id)
+
+                await supabase
+                    .from('posts')
+                    .update({
+                        likes: Math.max(0, (post.likes || 0) - 1),
+                        dislikes: (post.dislikes || 0) + 1
+                    })
+                    .eq('id', id)
+
+                // Create notification for dislike
+                await createNotification({
+                    postId: id,
+                    postTitle: post.title,
+                    type: NotificationType.DISLIKE,
+                    userName: 'User',
+                    userId: user.id
+                })
+
+                return true
+            }
+        } else {
+            // No existing vote - add dislike
+            const { error: insertError } = await supabase
+                .from('user_votes')
+                .insert([{ user_id: user.id, post_id: id, vote_type: 'dislike' }])
+
+            if (insertError) throw insertError
+
+            await supabase
+                .from('posts')
+                .update({ dislikes: (post.dislikes || 0) + 1 })
+                .eq('id', id)
+
+            // Create notification for dislike
+            await createNotification({
+                postId: id,
+                postTitle: post.title,
+                type: NotificationType.DISLIKE,
+                userName: 'User',
+                userId: user.id
+            })
+
+            return true
+        }
     } catch (error) {
         console.error('Error disliking article:', error.message)
         return false
