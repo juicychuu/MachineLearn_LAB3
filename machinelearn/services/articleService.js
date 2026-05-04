@@ -106,14 +106,20 @@ export async function addArticles({ title, content, author, category }) {
             throw new Error('All fields are required')
         }
 
-        const { data, error } = await supabase
-            .from('posts')
-            .insert([{ title, content, author, category, likes: 0, dislikes: 0 }])
-            .select()
+        const response = await fetch('/api/articles', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ title, content, author, category }),
+        })
 
-        if (error) throw error
+        if (!response.ok) {
+            throw new Error('Failed to create article')
+        }
 
-        return data
+        const data = await response.json()
+        return data.article
     } catch (error) {
         console.error('Error adding article:', error.message)
         return null

@@ -5,7 +5,8 @@ export const NotificationType = {
     LIKE: 'like',
     DISLIKE: 'dislike',
     COMMENT: 'comment',
-    REPLY: 'reply'
+    REPLY: 'reply',
+    NEW_POST: 'new_post'
 }
 
 // Create a notification when someone interacts with an article
@@ -119,6 +120,8 @@ export function formatNotificationMessage(notification) {
             return `${user_name} commented on your article "${post_title}"`
         case NotificationType.REPLY:
             return `${user_name} replied to a comment on "${post_title}"`
+        case NotificationType.NEW_POST:
+            return `New article posted: "${post_title}" by ${user_name}`
         default:
             return `${user_name} interacted with "${post_title}"`
     }

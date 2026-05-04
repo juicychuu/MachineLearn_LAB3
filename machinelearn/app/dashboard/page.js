@@ -70,6 +70,35 @@ export default function Dashboard() {
     setNotifications(data || [])
     setUnreadCount(data?.filter(n => !n.is_read).length || 0)
   }
+
+  const getNotificationArticle = async (notification) => {
+    if (!notification?.post_id) return null
+    let article = posts.find(post => post.id === notification.post_id)
+    if (!article) {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', notification.post_id)
+        .single()
+      if (!error) article = data
+    }
+    return article
+  }
+
+  const handleNotificationClick = async (notification) => {
+    const article = await getNotificationArticle(notification)
+    if (!article) {
+      setModal({ isOpen: true, title: 'Article not found', message: 'We could not load the post for this notification.', type: 'error' })
+      return
+    }
+
+    setSelectedArticle(article)
+
+    if (!notification.is_read) {
+      await markNotificationAsRead(notification.id)
+      fetchNotifications()
+    }
+  }
   
   useEffect(() => {
     fetchPosts()
@@ -259,7 +288,7 @@ export default function Dashboard() {
               {activeView === 'notifications' ? 'Notifications' : 'Dashboard'}
             </h1>
             <p style={{ margin: '8px 0 0', fontSize: '15px', color: '#9ca3af' }}>
-              {activeView === 'notifications' ? 'View who liked, disliked, commented and replied' : 'Manage your articles and content'}
+              {activeView === 'notifications' ? 'View who liked, disliked, commented, replied, and new posts' : 'Manage your articles and content'}
             </p>
             <p style={{ margin: '8px 0 0', fontSize: '18px', color: '#3ECF8E', fontWeight: '500' }}>
               Welcome, {formatDisplayName(currentUserDisplayName)}!
@@ -675,7 +704,7 @@ export default function Dashboard() {
                 }}>
                   <span style={{ fontSize: '48px' }}>🔔</span>
                   <p style={{ margin: '16px 0 0', fontSize: '16px', color: '#9ca3af' }}>No notifications yet</p>
-                  <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#6b7280' }}>When someone likes, dislikes, comments, or replies, you'll see it here</p>
+                  <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#6b7280' }}>When someone likes, dislikes, comments, replies, or posts new articles, you'll see it here</p>
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: '16px' }}>
@@ -700,6 +729,7 @@ export default function Dashboard() {
                         {notification.type === 'dislike' && '👎'}
                         {notification.type === 'comment' && '💬'}
                         {notification.type === 'reply' && '↩️'}
+                        {notification.type === 'new_post' && '📝'}
                       </span>
                       
                       <div style={{ flex: 1 }}>
@@ -709,13 +739,17 @@ export default function Dashboard() {
                             fontWeight: '600',
                             color: notification.type === 'like' ? '#3ECF8E' : 
                                    notification.type === 'dislike' ? '#ef4444' : 
-                                   notification.type === 'comment' ? '#3b82f6' : '#8b5cf6',
+                                   notification.type === 'comment' ? '#3b82f6' : 
+                                   notification.type === 'reply' ? '#8b5cf6' :
+                                   notification.type === 'new_post' ? '#f59e0b' : '#6b7280',
                             backgroundColor: '#1a1a1a',
                             padding: '4px 10px',
                             borderRadius: '12px',
                             border: `1px solid ${notification.type === 'like' ? '#3ECF8E' : 
                                                notification.type === 'dislike' ? '#ef4444' : 
-                                               notification.type === 'comment' ? '#3b82f6' : '#8b5cf6'}`
+                                               notification.type === 'comment' ? '#3b82f6' : 
+                                               notification.type === 'reply' ? '#8b5cf6' :
+                                               notification.type === 'new_post' ? '#f59e0b' : '#6b7280'}`
                           }}>
                             {notification.type.toUpperCase()}
                           </span>
@@ -742,27 +776,45 @@ export default function Dashboard() {
                         </p>
                       </div>
 
-                      {!notification.is_read && (
-                        <button 
-                          onClick={async () => {
-                            await markNotificationAsRead(notification.id)
-                            fetchNotifications()
-                          }}
-                          style={{ 
-                            backgroundColor: '#3ECF8E', 
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <button
+                          onClick={() => handleNotificationClick(notification)}
+                          style={{
+                            backgroundColor: '#3ECF8E',
                             color: '#ffffff',
                             border: 'none',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
+                            padding: '8px 14px',
+                            borderRadius: '8px',
                             fontSize: '12px',
                             cursor: 'pointer',
                             boxShadow: '0 2px 10px rgba(62,207,142,0.3)',
                             transition: 'all 0.3s ease'
                           }}
                         >
-                          Mark read
+                          View Post
                         </button>
-                      )}
+                        {!notification.is_read && (
+                          <button 
+                            onClick={async () => {
+                              await markNotificationAsRead(notification.id)
+                              fetchNotifications()
+                            }}
+                            style={{ 
+                              backgroundColor: '#3ECF8E', 
+                              color: '#ffffff',
+                              border: 'none',
+                              padding: '8px 12px',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 10px rgba(62,207,142,0.3)',
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
+                            Mark read
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
