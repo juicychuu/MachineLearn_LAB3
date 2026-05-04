@@ -428,6 +428,7 @@ export default function Dashboard() {
                 .map((post, index) => (
                   <div 
                     key={post.id}
+                    onClick={() => setSelectedArticle(post)}
                     style={{ 
                       backgroundColor: '#1a1a1a', 
                       borderRadius: '12px', 
@@ -437,7 +438,8 @@ export default function Dashboard() {
                       alignItems: 'center',
                       gap: '20px',
                       border: '1px solid #2a2a2a',
-                      transition: 'all 0.3s ease'
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
                     }}
                   >
                     <span style={{ 
