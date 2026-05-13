@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { addArticles, likeArticle, dislikeArticle, addComment, getComments, addReply, getReplies, shareArticle, SharePlatform, getUserVotesForPosts, deleteComment, getCurrentUserDisplayName, formatDisplayName, setCurrentUserDisplayName, getCurrentUser } from '../../services/articleService'
+import { addArticles, likeArticle, dislikeArticle, addComment, getComments, addReply, getReplies, shareArticle, SharePlatform, getUserVotesForPosts, deleteComment, getCurrentUserDisplayName, getCurrentUserLastSignIn, isCurrentUserNew, formatDisplayName, setCurrentUserDisplayName, getCurrentUser } from '../../services/articleService'
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, formatNotificationMessage, NotificationType } from '../../services/notificationService'
 import { supabase } from '../../lib/supabaseClient'
 import Modal from '../components/Modal'
@@ -66,7 +66,17 @@ export default function Dashboard() {
   }
 
   const fetchNotifications = async () => {
-    const data = await getNotifications()
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      setNotifications([])
+      setUnreadCount(0)
+      return
+    }
+
+    const isNewUser = await isCurrentUserNew()
+    const since = isNewUser ? await getCurrentUserLastSignIn() : null
+    const data = await getNotifications(currentUser.id, since)
+
     setNotifications(data || [])
     setUnreadCount(data?.filter(n => !n.is_read).length || 0)
   }

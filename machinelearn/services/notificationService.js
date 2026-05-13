@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
 
-// Notification types
 export const NotificationType = {
     LIKE: 'like',
     DISLIKE: 'dislike',
@@ -9,7 +8,6 @@ export const NotificationType = {
     NEW_POST: 'new_post'
 }
 
-// Create a notification when someone interacts with an article
 export async function createNotification({ 
     postId, 
     postTitle, 
@@ -39,13 +37,22 @@ export async function createNotification({
     }
 }
 
-// Get all notifications for the dashboard
-export async function getNotifications() {
+export async function getNotifications(userId, since) {
+    if (!userId) {
+        return []
+    }
+
     try {
-        const { data, error } = await supabase
+        let query = supabase
             .from('notifications')
             .select('*')
-            .order('created_at', { ascending: false })
+            .eq('user_id', userId)
+
+        if (since) {
+            query = query.gte('created_at', since)
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false })
 
         if (error) throw error
 
@@ -56,7 +63,7 @@ export async function getNotifications() {
     }
 }
 
-// Mark notification as read
+
 export async function markNotificationAsRead(id) {
     try {
         const { error } = await supabase
@@ -73,7 +80,6 @@ export async function markNotificationAsRead(id) {
     }
 }
 
-// Mark all notifications as read
 export async function markAllNotificationsAsRead() {
     try {
         const { error } = await supabase
@@ -90,7 +96,6 @@ export async function markAllNotificationsAsRead() {
     }
 }
 
-// Get unread notification count
 export async function getUnreadNotificationCount() {
     try {
         const { data, error } = await supabase
@@ -107,7 +112,6 @@ export async function getUnreadNotificationCount() {
     }
 }
 
-// Format notification message based on type
 export function formatNotificationMessage(notification) {
     const { type, user_name, post_title } = notification
     

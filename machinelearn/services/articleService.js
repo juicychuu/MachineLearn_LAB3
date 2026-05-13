@@ -1,7 +1,6 @@
 import { supabase } from '../lib/supabaseClient'
 import { createNotification, NotificationType } from './notificationService'
 
-// Get current user from Supabase auth
 export async function getCurrentUser() {
     const { data: { user }, error } = await supabase.auth.getUser()
     return user
@@ -38,6 +37,34 @@ export async function getCurrentUserDisplayName() {
     return user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'User'
 }
 
+export async function getCurrentUserLastSignIn() {
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error) {
+        console.error('Error fetching current user last sign-in:', error.message)
+        return null
+    }
+    return user?.last_sign_in_at ? new Date(user.last_sign_in_at).toISOString() : null
+}
+
+export async function isCurrentUserNew() {
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error) {
+        console.error('Error checking current user age:', error.message)
+        return false
+    }
+
+    if (!user?.created_at || !user?.last_sign_in_at) {
+        return false
+    }
+
+    const createdAt = new Date(user.created_at).getTime()
+    const lastSignInAt = new Date(user.last_sign_in_at).getTime()
+    const timeDiff = Math.abs(lastSignInAt - createdAt)
+
+    // Treat user as new if their first sign-in occurred within one minute of account creation.
+    return timeDiff <= 60 * 1000
+}
+
 export async function setCurrentUserDisplayName(displayName) {
     const { error } = await supabase.auth.updateUser({
         data: { full_name: displayName }
@@ -53,7 +80,6 @@ export async function isCurrentUserAuthor(author) {
     return currentName === author
 }
 
-// Get user's vote on a specific post
 export async function getUserVote(postId) {
     try {
         const user = await getCurrentUser()
@@ -74,7 +100,6 @@ export async function getUserVote(postId) {
     }
 }
 
-// Get all user votes for multiple posts
 export async function getUserVotesForPosts(postIds) {
     try {
         const user = await getCurrentUser()
@@ -88,7 +113,6 @@ export async function getUserVotesForPosts(postIds) {
 
         if (error) throw error
 
-        // Convert to object with postId as key
         const votesMap = {}
         data.forEach(vote => {
             votesMap[vote.post_id] = vote
@@ -144,7 +168,6 @@ export async function likeArticle(id) {
         if (fetchError) throw fetchError
         if (!post) throw new Error('Post not found')
 
-        // Check if user has already voted
         const existingVote = await getUserVote(id)
 
         if (existingVote) {
@@ -176,7 +199,6 @@ export async function likeArticle(id) {
                     })
                     .eq('id', id)
 
-                // Create notification for like
                 await createNotification({
                     postId: id,
                     postTitle: post.title,
@@ -188,7 +210,7 @@ export async function likeArticle(id) {
                 return true
             }
         } else {
-            // No existing vote - add like
+     
             const { error: insertError } = await supabase
                 .from('user_votes')
                 .insert([{ user_id: user.id, post_id: id, vote_type: 'like' }])
@@ -200,7 +222,6 @@ export async function likeArticle(id) {
                 .update({ likes: (post.likes || 0) + 1 })
                 .eq('id', id)
 
-            // Create notification for like
             await createNotification({
                 postId: id,
                 postTitle: post.title,
@@ -265,7 +286,6 @@ export async function dislikeArticle(id) {
                     })
                     .eq('id', id)
 
-                // Create notification for dislike
                 await createNotification({
                     postId: id,
                     postTitle: post.title,
@@ -277,7 +297,7 @@ export async function dislikeArticle(id) {
                 return true
             }
         } else {
-            // No existing vote - add dislike
+          
             const { error: insertError } = await supabase
                 .from('user_votes')
                 .insert([{ user_id: user.id, post_id: id, vote_type: 'dislike' }])
@@ -289,7 +309,6 @@ export async function dislikeArticle(id) {
                 .update({ dislikes: (post.dislikes || 0) + 1 })
                 .eq('id', id)
 
-            // Create notification for dislike
             await createNotification({
                 postId: id,
                 postTitle: post.title,
@@ -315,7 +334,6 @@ export async function addComment(postId, { author, content }) {
         const user = await getCurrentUser()
         if (!user) throw new Error('User not authenticated')
 
-        // Get post title for notification
         const { data: post } = await supabase
             .from('posts')
             .select('title')
@@ -329,7 +347,6 @@ export async function addComment(postId, { author, content }) {
 
         if (error) throw error
 
-        // Create notification for comment
         if (post) {
             await createNotification({
                 postId: postId,
@@ -424,7 +441,6 @@ export async function addReply(commentId, { author, content }) {
 
         if (error) throw error
 
-        // Create notification for reply
         await createNotification({
             postId: comment?.post_id || null,
             postTitle: postTitle,
@@ -457,7 +473,6 @@ export async function getReplies(commentId) {
     }
 }
 
-// Share platforms enum
 export const SharePlatform = {
     WHATSAPP: 'whatsapp',
     FACEBOOK: 'facebook',
@@ -467,13 +482,11 @@ export const SharePlatform = {
     TELEGRAM: 'telegram'
 }
 
-// Generate share URL for a post
 export function getShareUrl(postId, postTitle) {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
     return `${baseUrl}/dashboard?post=${postId}`
 }
 
-// Share article to different platforms
 export async function shareArticle(post, platform) {
     try {
         if (!post || !platform) {
@@ -508,7 +521,6 @@ export async function shareArticle(post, platform) {
                 throw new Error('Invalid platform')
         }
 
-        // Open share window
         if (typeof window !== 'undefined' && shareUrlGenerated) {
             window.open(shareUrlGenerated, '_blank', 'width=600,height=400')
         }
