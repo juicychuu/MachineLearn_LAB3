@@ -20,6 +20,17 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey)
 
+function isSameUserAsAuthor(user, author) {
+  if (!author) return false
+
+  const normalizedAuthor = String(author).trim().toLowerCase()
+  const userEmail = String(user.email || '').trim().toLowerCase()
+  const userFullName = String(user.user_metadata?.full_name || '').trim().toLowerCase()
+  const userName = String(user.user_metadata?.name || '').trim().toLowerCase()
+
+  return [userEmail, userFullName, userName].some((value) => value && value === normalizedAuthor)
+}
+
 async function notifyNewPublishedArticle(article, author) {
   if (!supabaseServiceKey) {
     console.log('SUPABASE_SERVICE_ROLE_KEY not set - skipping new post notifications')
@@ -34,11 +45,12 @@ async function notifyNewPublishedArticle(article, author) {
       return
     }
 
-    if (!users?.users?.length) {
+    const recipients = (users?.users || []).filter((user) => !isSameUserAsAuthor(user, author))
+    if (!recipients.length) {
       return
     }
 
-    const userIds = users.users.map((user) => user.id)
+    const userIds = recipients.map((user) => user.id)
 
     const { data: existingNotifications, error: existingError } = await supabase
       .from('notifications')
@@ -53,7 +65,7 @@ async function notifyNewPublishedArticle(article, author) {
     }
 
     const existingUserIds = new Set((existingNotifications || []).map((n) => n.user_id))
-    const notifications = users.users
+    const notifications = recipients
       .filter((user) => !existingUserIds.has(user.id))
       .map((user) => ({
         post_id: article.id,
