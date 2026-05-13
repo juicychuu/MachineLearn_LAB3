@@ -114,12 +114,14 @@ export async function addArticles({ title, content, author, category }) {
             body: JSON.stringify({ title, content, author, category }),
         })
 
+        const data = await response.json().catch(() => null)
+
         if (!response.ok) {
-            throw new Error('Failed to create article')
+            const errorMessage = data?.error || data?.message || 'Failed to create article'
+            throw new Error(errorMessage)
         }
 
-        const data = await response.json()
-        return data.article
+        return data?.article || null
     } catch (error) {
         console.error('Error adding article:', error.message)
         return null

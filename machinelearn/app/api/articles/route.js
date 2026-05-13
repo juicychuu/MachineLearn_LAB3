@@ -1,12 +1,84 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+function normalizeSupabaseUrl(url) {
+  try {
+    return new URL(url).origin
+  } catch (error) {
+    console.warn('Invalid NEXT_PUBLIC_SUPABASE_URL, falling back to default Supabase URL.', url)
+    return 'https://fepshpsflpzaejqbizit.supabase.co'
+  }
+}
 
-// Use service key if available, otherwise fall back to anon key (may not work for all operations)
+const supabaseUrl = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fepshpsflpzaejqbizit.supabase.co')
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlcHNocHNmbHB6YWVqcWJpeml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxNTQ2MjAsImV4cCI6MjA5MTczMDYyMH0.DUgB5ERwQNfxvlMS_4ji7FcmXMkwTEUA6nCgx7PY0uk'
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  console.warn('NEXT_PUBLIC_SUPABASE_URL is not set. Falling back to embedded Supabase URL.')
+}
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey)
+
+async function notifyNewPublishedArticle(article, author) {
+  if (!supabaseServiceKey) {
+    console.log('SUPABASE_SERVICE_ROLE_KEY not set - skipping new post notifications')
+    return
+  }
+
+  try {
+    const { data: users, error: usersError } = await supabase.auth.admin.listUsers()
+
+    if (usersError) {
+      console.error('Error fetching users for new post notification:', usersError)
+      return
+    }
+
+    if (!users?.users?.length) {
+      return
+    }
+
+    const userIds = users.users.map((user) => user.id)
+
+    const { data: existingNotifications, error: existingError } = await supabase
+      .from('notifications')
+      .select('user_id')
+      .in('user_id', userIds)
+      .eq('post_id', article.id)
+      .eq('type', 'new_post')
+
+    if (existingError) {
+      console.error('Error checking existing new post notifications:', existingError)
+      return
+    }
+
+    const existingUserIds = new Set((existingNotifications || []).map((n) => n.user_id))
+    const notifications = users.users
+      .filter((user) => !existingUserIds.has(user.id))
+      .map((user) => ({
+        post_id: article.id,
+        post_title: article.title,
+        type: 'new_post',
+        user_name: author,
+        user_id: user.id,
+        is_read: false
+      }))
+
+    if (!notifications.length) {
+      return
+    }
+
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert(notifications)
+
+    if (notificationError) {
+      console.error('Error creating new post notifications:', notificationError)
+    }
+  } catch (notificationErr) {
+    console.error('New post notification creation failed:', notificationErr)
+  }
+}
 
 export async function POST(request) {
   try {
@@ -28,40 +100,7 @@ export async function POST(request) {
       throw new Error(`Failed to insert article: ${articleError.message}`)
     }
 
-    // Try to create notifications for all users (requires service role key)
-    if (supabaseServiceKey) {
-      try {
-        const { data: users, error: usersError } = await supabase.auth.admin.listUsers()
-
-        if (usersError) {
-          console.error('Error fetching users:', usersError)
-          // Continue without notifications if we can't fetch users
-        } else if (users.users && users.users.length > 0) {
-          const notifications = users.users.map(user => ({
-            post_id: article.id,
-            post_title: article.title,
-            type: 'new_post',
-            user_name: author,
-            user_id: user.id,
-            is_read: false
-          }))
-
-          const { error: notificationError } = await supabase
-            .from('notifications')
-            .insert(notifications)
-
-          if (notificationError) {
-            console.error('Error creating notifications:', notificationError)
-            // Continue even if notifications fail
-          }
-        }
-      } catch (notificationErr) {
-        console.error('Notification creation failed:', notificationErr)
-        // Continue with article creation even if notifications fail
-      }
-    } else {
-      console.log('SUPABASE_SERVICE_ROLE_KEY not set - skipping user notifications')
-    }
+    await notifyNewPublishedArticle(article, author)
 
     // TODO: Send email notifications to all users
     // You can use Supabase's email service or a third-party service like Resend

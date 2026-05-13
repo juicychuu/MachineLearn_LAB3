@@ -99,6 +99,23 @@ export default function Dashboard() {
       fetchNotifications()
     }
   }
+
+  const groupNotificationsByPost = (notificationsList) => {
+    return Object.values(
+      notificationsList.reduce((groups, notification) => {
+        const key = notification.post_id || 'general'
+        if (!groups[key]) {
+          groups[key] = {
+            postId: notification.post_id || 'general',
+            postTitle: notification.post_title || 'General Notifications',
+            items: []
+          }
+        }
+        groups[key].items.push(notification)
+        return groups
+      }, {})
+    )
+  }
   
   useEffect(() => {
     fetchPosts()
@@ -285,7 +302,7 @@ export default function Dashboard() {
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#ffffff', textShadow: '0 0 20px rgba(62,207,142,0.2)' }}>
-              {activeView === 'notifications' ? 'Notifications' : 'Dashboard'}
+              {activeView === 'notifications' ? 'Notifications' : 'Active Archive'}
             </h1>
             <p style={{ margin: '8px 0 0', fontSize: '15px', color: '#9ca3af' }}>
               {activeView === 'notifications' ? 'View who liked, disliked, commented, replied, and new posts' : 'Manage your articles and content'}
@@ -709,113 +726,137 @@ export default function Dashboard() {
                   <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#6b7280' }}>When someone likes, dislikes, comments, replies, or posts new articles, you'll see it here</p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: '16px' }}>
-                  {notifications.map((notification) => (
-                    <div 
-                      key={notification.id}
-                      style={{ 
-                        backgroundColor: notification.is_read ? '#1a1a1a' : '#1e293b',
-                        borderRadius: '12px', 
-                        padding: '20px 24px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                        border: '1px solid',
-                        borderColor: notification.is_read ? '#2a2a2a' : '#374151',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '16px',
-                        transition: 'all 0.3s ease'
+                <div style={{ display: 'grid', gap: '24px' }}>
+                  {groupNotificationsByPost(notifications).map((group) => (
+                    <div
+                      key={`${group.postId}-${group.postTitle}`}
+                      style={{
+                        backgroundColor: '#111827',
+                        borderRadius: '16px',
+                        padding: '20px',
+                        border: '1px solid #2a2a2a'
                       }}
                     >
-                      <span style={{ fontSize: '24px' }}>
-                        {notification.type === 'like' && '👍'}
-                        {notification.type === 'dislike' && '👎'}
-                        {notification.type === 'comment' && '💬'}
-                        {notification.type === 'reply' && '↩️'}
-                        {notification.type === 'new_post' && '📝'}
-                      </span>
-                      
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ 
-                            fontSize: '12px', 
-                            fontWeight: '600',
-                            color: notification.type === 'like' ? '#3ECF8E' : 
-                                   notification.type === 'dislike' ? '#ef4444' : 
-                                   notification.type === 'comment' ? '#3b82f6' : 
-                                   notification.type === 'reply' ? '#8b5cf6' :
-                                   notification.type === 'new_post' ? '#f59e0b' : '#6b7280',
-                            backgroundColor: '#1a1a1a',
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            border: `1px solid ${notification.type === 'like' ? '#3ECF8E' : 
-                                               notification.type === 'dislike' ? '#ef4444' : 
-                                               notification.type === 'comment' ? '#3b82f6' : 
-                                               notification.type === 'reply' ? '#8b5cf6' :
-                                               notification.type === 'new_post' ? '#f59e0b' : '#6b7280'}`
-                          }}>
-                            {notification.type.toUpperCase()}
-                          </span>
-                          {!notification.is_read && (
-                            <span style={{ 
-                              width: '8px', 
-                              height: '8px', 
-                              borderRadius: '50%', 
-                              backgroundColor: '#3ECF8E',
-                              boxShadow: '0 0 10px rgba(62,207,142,0.5)'
-                            }} />
-                          )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>{group.postTitle}</h3>
+                          <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#9ca3af' }}>
+                            {group.items.length} notification{group.items.length === 1 ? '' : 's'}
+                            {group.items.some((n) => !n.is_read) ? ` · ${group.items.filter((n) => !n.is_read).length} unread` : ''}
+                          </p>
                         </div>
-                        <p style={{ margin: '8px 0 0', fontSize: '15px', color: '#ffffff' }}>
-                          <strong style={{ color: '#3ECF8E' }}>{notification.user_id === currentUserId ? currentUserDisplayName : formatDisplayName(notification.user_name)}</strong>{' '}
-                          {notification.type === 'like' && 'liked'}
-                          {notification.type === 'dislike' && 'disliked'}
-                          {notification.type === 'comment' && 'commented on'}
-                          {notification.type === 'reply' && 'replied to a comment on'}{' '}
-                          "<span style={{ fontWeight: '600', color: '#3ECF8E' }}>{notification.post_title}</span>"
-                        </p>
-                        <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#9ca3af' }}>
-                          {new Date(notification.created_at).toLocaleString()}
-                        </p>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <button
-                          onClick={() => handleNotificationClick(notification)}
-                          style={{
-                            backgroundColor: '#3ECF8E',
-                            color: '#ffffff',
-                            border: 'none',
-                            padding: '8px 14px',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 10px rgba(62,207,142,0.3)',
-                            transition: 'all 0.3s ease'
-                          }}
-                        >
-                          View Post
-                        </button>
-                        {!notification.is_read && (
-                          <button 
-                            onClick={async () => {
-                              await markNotificationAsRead(notification.id)
-                              fetchNotifications()
-                            }}
+                      <div style={{ display: 'grid', gap: '14px' }}>
+                        {group.items.map((notification) => (
+                          <div 
+                            key={notification.id}
                             style={{ 
-                              backgroundColor: '#3ECF8E', 
-                              color: '#ffffff',
-                              border: 'none',
-                              padding: '8px 12px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              boxShadow: '0 2px 10px rgba(62,207,142,0.3)',
+                              backgroundColor: notification.is_read ? '#1a1a1a' : '#1e293b',
+                              borderRadius: '12px', 
+                              padding: '20px 24px',
+                              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                              border: '1px solid',
+                              borderColor: notification.is_read ? '#2a2a2a' : '#374151',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '16px',
                               transition: 'all 0.3s ease'
                             }}
                           >
-                            Mark read
-                          </button>
-                        )}
+                            <span style={{ fontSize: '24px' }}>
+                              {notification.type === 'like' && '👍'}
+                              {notification.type === 'dislike' && '👎'}
+                              {notification.type === 'comment' && '💬'}
+                              {notification.type === 'reply' && '↩️'}
+                              {notification.type === 'new_post' && '📝'}
+                            </span>
+                            
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ 
+                                  fontSize: '12px', 
+                                  fontWeight: '600',
+                                  color: notification.type === 'like' ? '#3ECF8E' : 
+                                         notification.type === 'dislike' ? '#ef4444' : 
+                                         notification.type === 'comment' ? '#3b82f6' : 
+                                         notification.type === 'reply' ? '#8b5cf6' :
+                                         notification.type === 'new_post' ? '#f59e0b' : '#6b7280',
+                                  backgroundColor: '#1a1a1a',
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  border: `1px solid ${notification.type === 'like' ? '#3ECF8E' : 
+                                                     notification.type === 'dislike' ? '#ef4444' : 
+                                                     notification.type === 'comment' ? '#3b82f6' : 
+                                                     notification.type === 'reply' ? '#8b5cf6' :
+                                                     notification.type === 'new_post' ? '#f59e0b' : '#6b7280'}`
+                                }}>
+                                  {notification.type.toUpperCase()}
+                                </span>
+                                {!notification.is_read && (
+                                  <span style={{ 
+                                    width: '8px', 
+                                    height: '8px', 
+                                    borderRadius: '50%', 
+                                    backgroundColor: '#3ECF8E',
+                                    boxShadow: '0 0 10px rgba(62,207,142,0.5)'
+                                  }} />
+                                )}
+                              </div>
+                              <p style={{ margin: '8px 0 0', fontSize: '15px', color: '#ffffff' }}>
+                                <strong style={{ color: '#3ECF8E' }}>{notification.user_id === currentUserId ? currentUserDisplayName : formatDisplayName(notification.user_name)}</strong>{' '}
+                                {notification.type === 'like' && 'liked'}
+                                {notification.type === 'dislike' && 'disliked'}
+                                {notification.type === 'comment' && 'commented on'}
+                                {notification.type === 'reply' && 'replied to a comment on'}{' '}
+                                "<span style={{ fontWeight: '600', color: '#3ECF8E' }}>{notification.post_title}</span>"
+                              </p>
+                              <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#9ca3af' }}>
+                                {new Date(notification.created_at).toLocaleString()}
+                              </p>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                              <button
+                                onClick={() => handleNotificationClick(notification)}
+                                style={{
+                                  backgroundColor: '#3ECF8E',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  padding: '8px 14px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 2px 10px rgba(62,207,142,0.3)',
+                                  transition: 'all 0.3s ease'
+                                }}
+                              >
+                                View Post
+                              </button>
+                              {!notification.is_read && (
+                                <button 
+                                  onClick={async () => {
+                                    await markNotificationAsRead(notification.id)
+                                    fetchNotifications()
+                                  }}
+                                  style={{ 
+                                    backgroundColor: '#3ECF8E', 
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    padding: '8px 12px',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 2px 10px rgba(62,207,142,0.3)',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                >
+                                  Mark read
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
