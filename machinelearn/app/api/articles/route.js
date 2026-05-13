@@ -45,7 +45,7 @@ async function notifyNewPublishedArticle(article, author) {
       return
     }
 
-    const recipients = (users?.users || []).filter((user) => !isSameUserAsAuthor(user, author))
+    const recipients = users?.users || []
     if (!recipients.length) {
       return
     }
